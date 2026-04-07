@@ -1,48 +1,45 @@
+/**
+ * Stripe configuration
+ * Uses centralized config for API keys
+ */
+
 const Stripe = require("stripe");
+const config = require("../config");
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("Missing STRIPE_SECRET_KEY environment variable");
-}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-06-20",
-});
+const stripe = new Stripe(config.stripe.secretKey, { apiVersion: "2024-06-20" });
 
 /**
- * Create a Stripe checkout session
+ * Create Stripe checkout session for subscription
+ * @param {object} params
+ * @param {string} params.email
+ * @param {string} params.userId
+ * @param {string} params.priceId
+ * @param {string} params.plan
+ * @returns {Promise<object>} Checkout session
  */
 async function createCheckoutSession({ email, userId, priceId, plan }) {
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
     mode: "subscription",
     customer_email: email,
-    line_items: [
-      {
-        price: priceId,
-        quantity: 1,
-      },
-    ],
-    success_url: `${process.env.FRONTEND_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.FRONTEND_URL}/pricing`,
-    metadata: {
-      userId,
-      plan,
-    },
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: `${config.server.frontendUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${config.server.frontendUrl}/pricing`,
+    metadata: { userId, plan },
   });
-
   return session;
 }
 
 /**
- * Create a Stripe billing portal session
+ * Create Stripe billing portal session
+ * @param {string} customerId
+ * @returns {Promise<object>}
  */
 async function createBillingPortalSession(customerId) {
-  const session = await stripe.billingPortal.sessions.create({
+  return stripe.billingPortal.sessions.create({
     customer: customerId,
-    return_url: `${process.env.FRONTEND_URL}/dashboard`,
+    return_url: `${config.server.frontendUrl}/dashboard`,
   });
-
-  return session;
 }
 
 module.exports = { stripe, createCheckoutSession, createBillingPortalSession };

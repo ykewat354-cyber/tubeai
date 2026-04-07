@@ -1,40 +1,33 @@
+/**
+ * OpenAI configuration and content generation
+ * Uses centralized config for API key and model selection
+ */
+
 const OpenAI = require("openai");
+const config = require("../config");
 
-// Validate API key exists
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error("Missing OPENAI_API_KEY environment variable");
-}
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = new OpenAI({ apiKey: config.openai.apiKey });
 
 /**
  * Generate YouTube content using OpenAI
- * @param {string} prompt - User request description
- * @param {object} options - Generation options
+ * @param {string} prompt - User's topic description
+ * @param {object} options
  * @param {string} options.model - OpenAI model to use
- * @param {object} options.format - Output format (titles, ideas, script)
- * @returns {Promise<object>} - Generated content
+ * @param {string} options.format - Output format
+ * @returns {Promise<object>} Generated content
  */
 async function generateContent(prompt, options = {}) {
-  const model = options.model || "gpt-4o-mini";
+  const model = options.model || config.openai.defaultModel.free;
   const format = options.format || "all";
 
-  // Build system prompt based on requested format
-  let systemPrompt = "You are an expert YouTube content strategist and scriptwriter. ";
+  const systemPrompts = {
+    ideas: "Generate compelling YouTube video ideas based on the user's request.",
+    titles: "Generate catchy, click-worthy YouTube titles optimized for CTR.",
+    script: "Write a complete YouTube video script with hook, body, and call-to-action.",
+    all: "Generate YouTube video ideas, titles, and scripts. Return everything structured.",
+  };
 
-  if (format === "ideas") {
-    systemPrompt += "Generate compelling YouTube video ideas based on the user's request.";
-  } else if (format === "titles") {
-    systemPrompt += "Generate catchy, click-worthy YouTube titles optimized for CTR.";
-  } else if (format === "script") {
-    systemPrompt += "Write a complete YouTube video script with hook, body, and call-to-action.";
-  } else {
-    systemPrompt += "Generate YouTube video ideas, titles, and scripts. Return everything structured.";
-  }
-
-  systemPrompt += "\n\nRespond in JSON format with clear, actionable output.";
+  const systemPrompt = `You are an expert YouTube content strategist and scriptwriter. ${systemPrompts[format] || systemPrompts.all}\n\nRespond in JSON format with clear, actionable output.`;
 
   const response = await openai.chat.completions.create({
     model,
@@ -52,7 +45,6 @@ async function generateContent(prompt, options = {}) {
   try {
     return JSON.parse(content);
   } catch {
-    // If JSON parsing fails, return raw content
     return { raw: content };
   }
 }

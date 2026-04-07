@@ -1,24 +1,25 @@
-const rateLimit = require("express-rate-limit");
-
 /**
- * Rate limiter for authentication endpoints
- * Prevents brute force attacks
+ * Rate limiting middleware
+ * Prevents brute force on auth and abuse on AI generation endpoints
  */
+
+const rateLimit = require("express-rate-limit");
+const config = require("../config");
+
+/** Rate limiter for authentication endpoints */
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // max 10 requests per window
-  message: { error: "Too many login attempts. Please try again later." },
+  windowMs: config.rateLimit.auth.windowMs,
+  max: config.rateLimit.auth.max,
+  message: { success: false, error: "Too many login attempts. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-/**
- * Rate limiter for AI generation endpoints
- */
+/** Rate limiter for AI generation endpoints */
 const generateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 5, // max 5 generations per minute
-  message: { error: "Too many generation requests. Please wait a moment." },
+  windowMs: config.rateLimit.generate.windowMs,
+  max: config.rateLimit.generate.max,
+  message: { success: false, error: "Too many generation requests. Please wait a moment." },
   standardHeaders: true,
   legacyHeaders: false,
 });

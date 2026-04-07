@@ -1,0 +1,51 @@
+# Docker Compose for local development
+# Run: docker compose up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: tubeai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tubeai
+      POSTGRES_USER: tubeuser
+      POSTGRES_PASSWORD: tubepassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tubeuser -d tubeai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Uncomment to run backend in Docker:
+  # backend:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.backend
+  #   container_name: tubeai-backend
+  #   restart: unless-stopped
+  #   env_file:
+  #     - backend/.env
+  #   ports:
+  #     - "5000:5000"
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+
+  # Uncomment to run frontend in Docker:
+  # frontend:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.frontend
+  #   container_name: tubeai-frontend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - backend
+
+volumes:
+  postgres_data:

@@ -1,7 +1,15 @@
+/**
+ * Request validation middleware using Zod
+ * Centralizes schema validation with standardized error responses
+ */
+
 const { z } = require("zod");
+const { apiResponse } = require("../utils/constants");
 
 /**
- * Middleware factory: validates request body against a Zod schema
+ * Create validation middleware from a Zod schema
+ * @param {z.ZodSchema} schema - Zod schema to validate request body against
+ * @returns {Function} Express middleware
  */
 function validate(schema) {
   return (req, res, next) => {
@@ -14,7 +22,9 @@ function validate(schema) {
           field: e.path.join("."),
           message: e.message,
         }));
-        return res.status(400).json({ error: "Validation failed", details: errors });
+        return res.status(400).json(
+          apiResponse(false, "Validation failed", null, { errors })
+        );
       }
       next(err);
     }

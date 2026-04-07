@@ -1,0 +1,33 @@
+# Dockerfile for TubeAI Frontend
+# Multi-stage builds for optimal bundle size
+
+FROM node:20-alpine AS base
+WORKDIR /app
+
+# Dependencies
+FROM base AS deps
+COPY frontend/package*.json ./
+RUN npm ci && npm cache clean --force
+
+# Build
+FROM base AS builder
+COPY frontend/ .
+COPY --from=deps /app/node_modules ./node_modules
+RUN npm run build
+
+# Production - only .next/node_modules needed
+FROM node:20-alpine AS production
+WORKDIR /app
+
+RUN addgroup -g 1001 -S nodejs && adduser -S appuser -u 1001
+
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+ENV NODE_ENV=production
+EXPOSE 3000
+
+USER appuser
+
+CMD ["node", "server.js"]
