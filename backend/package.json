@@ -1,11 +1,12 @@
 {
   "name": "tubeai-backend",
-  "version": "2.0.0",
-  "description": "TubeAI - AI YouTube Idea & Script Generator",
+  "version": "3.0.0",
+  "description": "TubeAI - Scalable AI YouTube Content Generator",
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "worker": "node scripts/queue-worker.js",
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev",
     "db:push": "npx prisma db push",
@@ -27,14 +28,18 @@
   "dependencies": {
     "@prisma/client": "^5.20.0",
     "bcryptjs": "^2.4.3",
+    "bullmq": "^5.12.0",
+    "compression": "^1.7.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "express-rate-limit": "^7.4.0",
     "helmet": "^7.1.0",
+    "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.9.15",
     "openai": "^4.60.0",
+    "rate-limit-redis": "^4.2.0",
     "stripe": "^16.10.0",
     "winston": "^3.14.2",
     "zod": "^3.23.8"

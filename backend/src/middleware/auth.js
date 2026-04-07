@@ -1,54 +1,46 @@
 /**
- * Authentication middleware
- * Verifies JWT tokens and attaches user to request
+ * Authentication Middleware
+ * Verifies JWT tokens with enhanced security
  */
 
-const jwt = require("jsonwebtoken");
-const config = require("../config");
+const jwt = require('jsonwebtoken');
+const config = require('../config');
+const logger = require('../utils/logger');
 
-/**
- * Authenticate middleware — verifies JWT and attaches user to req.user
- * @param {import('express').Request} req
- * @param {import('express').Response} res
- * @param {import('express').NextFunction} next
- */
 function authenticate(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ success: false, error: "Access denied. No token provided." });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
     }
 
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, config.auth.jwtSecret);
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, config.auth.jwtSecret, {
+      algorithms: ['HS256'], // Only allow HS256
+      clockTolerance: 15,    // Allow 15s clock drift
+    });
 
-    req.user = decoded; // { id, email, name }
+    req.user = decoded;
     next();
   } catch (err) {
-    if (err.name === "TokenExpiredError") {
-      return res.status(401).json({ success: false, error: "Token expired. Please login again." });
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ success: false, message: 'Token expired. Please login again.' });
     }
-    return res.status(401).json({ success: false, error: "Invalid token." });
+    logger.warn({ message: 'Auth failed', ip: req.ip, error: err.message });
+    return res.status(401).json({ success: false, message: 'Invalid token.' });
   }
 }
 
-/**
- * Optional auth — attaches user if valid token present, but doesn't block
- * Useful for endpoints that work with or without auth
- */
 function optionalAuth(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.split(" ")[1];
-      const decoded = jwt.verify(token, config.auth.jwtSecret);
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, config.auth.jwtSecret, { algorithms: ['HS256'] });
       req.user = decoded;
     }
     next();
-  } catch {
-    next();
-  }
+  } catch { next(); }
 }
 
 module.exports = { authenticate, optionalAuth };
