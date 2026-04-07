@@ -29,8 +29,12 @@ export default function LoginPage() {
         <button id="login-btn" class="w-full btn-primary mt-6 min-h-[44px]" type="button">Log In</button>
 
         <div class="text-center mt-6">
-          <a href="/auth/register" class="text-sm text-primary-500 hover:text-primary-400">Don't have an account? Sign up</a>
-        </div>
+          <div class="text-center mt-4">
+            <a href="/auth/register" class="text-sm text-primary-500 hover:text-primary-400">Don't have an account? Sign up</a>
+          </div>
+          <div class="text-center mt-2">
+            <a href="/auth/reset-password" class="text-sm text-dark-500 hover:text-dark-400">Forgot password?</a>
+          </div>
 
         <script>
           document.addEventListener('DOMContentLoaded', function() {

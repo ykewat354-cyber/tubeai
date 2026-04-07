@@ -1,4 +1,6 @@
 // TubeAI Database Schema
+// Version: 2.0 (Analytics + Auth extensions added)
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,20 +11,26 @@ datasource db {
 }
 
 model User {
-  id               String        @id @default(uuid())
+  id               String           @id @default(uuid())
   name             String
-  email            String        @unique
+  email            String           @unique
   password         String
-  plan             String        @default("free")
-  stripeCustomerId String?       @unique
-  stripeSubId      String?       @unique
+  emailVerified    Boolean          @default(false)
+  verificationToken String?         @unique
+  passwordResetCode String?
+  passwordResetExp DateTime?
+  plan             String           @default("free")
+  stripeCustomerId String?          @unique
+  stripeSubId      String?          @unique
   subscriptionEnd  DateTime?
   generations      Generation[]
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  analyticsEvents  AnalyticsEvent[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@index([email])
   @@index([stripeCustomerId])
+  @@index([verificationToken])
 }
 
 model Generation {
@@ -38,4 +46,21 @@ model Generation {
 
   @@index([userId])
   @@index([createdAt])
+}
+
+// Analytics events for activity tracking
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  event     String   // "login", "content_generated", "subscription_change", "history_deleted", "page_view"
+  metadata  Json?    // Flexible event data
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([event])
+  @@index([createdAt])
+  @@index([userId, createdAt])
 }

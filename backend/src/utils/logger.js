@@ -1,64 +1,102 @@
 /**
- * Lightweight structured logger
- * No external dependencies — uses console with formatted output
+ * Advanced Logging System (Winston)
  *
- * Output format:
- * [LEVEL] [TIMESTAMP] [MODULE] Message — Context
+ * Features:
+ * - File logging: combined.log, error.log
+ * - Console: colorized in dev, JSON in prod
+ * - Log rotation: 14-day retention, 20MB max per file
+ * - Uncaught exception + unhandled rejection handling
+ * - HTTP request logging middleware
  *
- * In development: colorized output
- * In production: JSON lines (machine-readable for log aggregation)
+ * Log files: backend/logs/
+ *
+ * Usage:
+ *   const logger = require("../utils/logger");
+ *   logger.info({ message: "User logged in", userId: "123" });
  */
 
-const LEVELS = {
-  info: "INFO",
-  warn: "WARN",
-  error: "ERROR",
-  debug: "DEBUG",
-};
+const winston = require("winston");
+const fs = require("fs");
+const path = require("path");
 
-function formatTimestamp() {
-  return new Date().toISOString().replace("T", " ").split(".")[0];
+const LOG_DIR = path.join(__dirname, "../../logs");
+
+if (!fs.existsSync(LOG_DIR)) {
+  fs.mkdirSync(LOG_DIR, { recursive: true });
 }
+
+const fileFormat = winston.format.combine(
+  winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+  winston.format.errors({ stack: true }),
+  winston.format.json()
+);
+
+const consoleFormat = winston.format.combine(
+  winston.format.colorize({ all: true }),
+  winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+  winston.format.printf(({ timestamp, level, message, ...rest }) => {
+    const restStr = Object.keys(rest).length > 0 ? " " + JSON.stringify(rest) : "";
+    return `[${timestamp}] ${level}: ${message}${restStr}`;
+  })
+);
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === "production" ? "info" : "debug"),
+  defaultMeta: { service: "tubeai-backend" },
+  transports: [
+    // Combined log (all levels)
+    new winston.transports.File({
+      filename: path.join(LOG_DIR, "combined.log"),
+      format: fileFormat,
+      maxsize: 20 * 1024 * 1024,
+      maxFiles: 14,
+    }),
+    // Error-only log
+    new winston.transports.File({
+      filename: path.join(LOG_DIR, "error.log"),
+      format: fileFormat,
+      level: "error",
+      maxsize: 20 * 1024 * 1024,
+      maxFiles: 30,
+    }),
+    // Console
+    new winston.transports.Console({
+      format: process.env.NODE_ENV === "production" ? fileFormat : consoleFormat,
+    }),
+  ],
+});
+
+logger.exceptions.handle(
+  new winston.transports.File({
+    filename: path.join(LOG_DIR, "exceptions.log"),
+    format: fileFormat,
+    maxsize: 20 * 1024 * 1024,
+  })
+);
+
+logger.rejections.handle(
+  new winston.transports.File({
+    filename: path.join(LOG_DIR, "rejections.log"),
+    format: fileFormat,
+    maxsize: 20 * 1024 * 1024,
+  })
+);
 
 /**
- * Log a message with optional context object
- * @param {string} level - One of: info, warn, error, debug
- * @param {object} data - { message, ...context }
+ * HTTP request logging middleware
  */
-function log(level, data) {
-  const timestamp = formatTimestamp();
-  const { message, ...context } = data;
-
-  if (process.env.NODE_ENV === "production") {
-    // Production: JSON line for log aggregation (Datadog, CloudWatch, etc.)
-    const entry = {
-      level,
-      timestamp,
-      message,
-      ...(Object.keys(context).length > 0 && { context }),
-    };
-    console.log(JSON.stringify(entry));
-  } else {
-    // Development: human-readable colored output
-    const contextStr = Object.keys(context).length > 0
-      ? "—" + JSON.stringify(context, null, 2)
-      : "";
-    console.log(`[${LEVELS[level]}] [${timestamp}] ${message} ${contextStr}`.trim());
-  }
-
-  // Always write errors to stderr
-  if (level === "error") {
-    console.error(JSON.stringify({ level, timestamp, message, ...context }));
-  }
+function requestLogger(req, res, next) {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (res.statusCode >= 400 || duration > 100) {
+      logger.warn({ message: "HTTP", method: req.method, path: req.originalUrl, status: res.statusCode, ms: duration });
+    } else {
+      logger.debug({ message: "HTTP", method: req.method, path: req.originalUrl, status: res.statusCode, ms: duration });
+    }
+  });
+  next();
 }
 
-module.exports = {
-  info: (data) => log("info", data),
-  warn: (data) => log("warn", data),
-  error: (data) => log("error", data),
-  debug: (data) => {
-    if (process.env.NODE_ENV === "development") {
-      log("debug", data);
-    }
-  },
-};
+module.exports = logger;
+module.exports.requestLogger = requestLogger;
