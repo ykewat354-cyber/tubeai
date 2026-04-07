@@ -1,54 +1,173 @@
-# TubeAI Architecture
+# TubeAI — System Architecture
 
-## System Overview
+## Overview
+
+TubeAI is a SaaS platform for YouTube creators to generate video ideas, titles, and scripts using AI (OpenAI GPT). The architecture follows a decoupled frontend/backend model for independent scaling and deployment.
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│   Browser   │────▶│ Next.js App  │────▶│  Express    │
-│  (Client)   │     │ (Frontend)   │     │  Backend    │
-└─────────────┘     └──────────────┘     └──────┬──────┘
-                                                │
-                     ┌──────────────────────────┤
-                     ▼                          ▼
-              ┌─────────────┐          ┌─────────────┐
-              │ PostgreSQL  │          │ OpenAI API  │
-              │ (Database)  │          │ (GPT-4o)    │
-              └─────────────┘          └─────────────┘
-                     ▲
-                     ▼
-              ┌─────────────┐
-              │ Stripe      │
-              │ (Payments)  │
-              └─────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                    Client (Browser)                      │
+│  Next.js SSR + Client Components / Mobile Browser        │
+└────────────────────────┬─────────────────────────────────┘
+                         │ HTTPS
+                         ▼
+┌──────────────────────────────────────────────────────────┐
+│              CDN / Reverse Proxy (Nginx/Cloudflare)       │
+│  SSL termination, caching, rate limiting, WAF             │
+└───────────┬──────────────────────┬───────────────────────┘
+            │ Static Pages         │ API Routes
+            ▼                      ▼
+┌────────────────────┐   ┌────────────────────────────────┐
+│ Next.js Frontend   │   │     Express.js Backend          │
+│ Static + SSR       │   │  (Node.js 20+)                  │
+└────────────────────┘   └────────────────────────────────┘
+                         │
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+   ┌─────────────┐ ┌───────────┐ ┌─────────────┐
+   │ PostgreSQL  │ │ OpenAI API│ │   Stripe    │
+   │ (User data) │ │ (GPT-4o)  │ │ (Payments)  │
+   └─────────────┘ └───────────┘ └─────────────┘
 ```
 
-## Auth Flow
+## Design Principles
 
-1. User registers → bcrypt hash → save to DB → return JWT
-2. User logs in → verify hash → return JWT
-3. Frontend stores JWT → sends with every request in `Authorization: Bearer <token>`
-4. Backend middleware verifies JWT → attaches `req.user`
+1. **Separation of Concerns** — Backend handles data, auth, AI. Frontend handles UI, routing, state.
+2. **Defense in Depth** — Validation at every layer: Zod (request), Prisma (DB), JWT (auth), rate limiting (network).
+3. **Stateless Backend** — No session storage. JWT tokens are self-contained. Horizontally scalable.
+4. **Mobile-First** — Responsive design with breakpoints at 640px, 768px, 1024px, 1280px.
+5. **Fail Fast** — Errors caught early, logged, and returned with proper HTTP status codes.
 
-## Subscription Flow
+## Data Flow
 
-1. User selects plan → backend creates Stripe Checkout Session
-2. User redirected to Stripe → enters payment → success
-3. Stripe webhook sends `checkout.session.completed` → backend updates user plan
-4. Usage limits enforced per request based on plan
+### Content Generation Flow
 
-## Data Models
+```
+Client ──POST /api/generate──▶ Middleware Chain:
+                                 1. authenticate (JWT verify)
+                                 2. checkUsageLimit (plan quota)
+                                 3. generateLimiter (rate limit)
+                                 4. validate (Zod schema)
+                             ──▶ Controller:
+                                 1. Extract topic, format, userId
+                                 2. Call generationService
+                             ──▶ Service:
+                                 1. OpenAI.generateContent(topic, model)
+                                 2. Prisma.generation.create()  ← save to history
+                                 3. Return sanitized result
+                             ──▶ Response: { data, usage }
+```
 
-### User
-- id, name, email, password (hashed)
-- plan (free/pro/pro-yearly)
-- stripeCustomerId, stripeSubId, subscriptionEnd
+### Subscription Flow
 
-### Generation
-- id, userId, topic, format, result (JSON)
-- model, tokens, createdAt
+```
+Client clicks "Upgrade"
+  │
+  ▼
+POST /api/subscription/checkout { plan: "pro" }
+  │
+  ▼
+Backend creates Stripe Checkout Session
+  │
+  ▼
+Redirect to Stripe hosted checkout (PCI compliant)
+  │
+  ▼
+User pays → Stripe sends webhook → checkout.session.completed
+  │
+  ▼
+Webhook handler updates: user.plan = "pro"
+                         user.stripeCustomerId = "..."
+                         user.stripeSubId = "..."
+  │
+  ▼
+Client redirected to success page → dashboard upgrades
+```
 
-## Rate Limiting
+## Database Schema
 
-- Auth endpoints: 10 requests per 15 min window
-- Generation endpoints: 5 requests per 1 min window
-- Usage limits: tracked per day via database count
+```
+User
+│── id (UUID, PK)
+│── name (String)
+│── email (String, UNIQUE, indexed)
+│── password (String — bcrypt hashed)
+│── plan (Enum: free, pro, pro_yearly — default: free)
+│── stripeCustomerId (String, UNIQUE, nullable)
+│── stripeSubId (String, UNIQUE, nullable)
+│── subscriptionEnd (DateTime, nullable)
+│── createdAt (DateTime, auto)
+│── updatedAt (DateTime, auto)
+│
+└── Generations (1:N)
+    │── id (UUID, PK)
+    │── userId (FK → User.id, CASCADE delete)
+    │── topic (String)
+    │── format (Enum: ideas, titles, script, all)
+    │── result (JSON — AI output)
+    │── model (String)
+    │── tokens (Int, nullable)
+    │── createdAt (DateTime, auto, indexed)
+```
+
+**Indexes:**
+- `User.email` — fast login lookup
+- `User.stripeCustomerId` — webhook customer resolution
+- `Generation.userId` — history queries by user
+- `Generation.createdAt` — time-range queries for usage limits
+
+## Plan & Limits Matrix
+
+| Feature | Free | Pro ($19/mo) | Pro Yearly ($149/yr) |
+|---------|------|-------------|---------------------|
+| Generations/day | 3 | 50 | 50 |
+| AI Model | GPT-4o-mini | GPT-4o | GPT-4o |
+| History | Last 100 | Unlimited | Unlimited |
+| Export | ❌ | ✅ PDF | ✅ PDF |
+| API Access | ❌ | ❌ | ✅ |
+| Priority Support | ❌ | ✅ | ✅ |
+
+## Security Layers
+
+| Layer | Mechanism | Purpose |
+|-------|-----------|---------|
+| Network | HTTPS + CORS origin restriction | Prevent unauthorized origins |
+| Auth | JWT (7-day expiry) | Stateless authentication |
+| Password | bcrypt (10 rounds) | Secure hashing |
+| Input | Zod schema validation | Reject malformed requests |
+| Rate Limiting | express-rate-limit + usage tracking | Prevent abuse |
+| Headers | Helmet (CSP, X-Frame, etc.) | Security headers |
+| Webhook | Stripe signature verification | Prevent fake webhook calls |
+| DB | Prisma parameterized queries | SQL injection prevention |
+
+## Cross-Device Strategy
+
+| Device | Breakpoint | Adaptation |
+|--------|-----------|------------|
+| Small Phone (≤640px) | sm | Single column, touch-friendly 44px buttons, stacked layout |
+| Large Phone | 641-767px | Two-column grid where possible |
+| Tablet | 768-1023px | Sidebar + main content layout |
+| Desktop | ≥1024px | Full sidebar, multi-column grids |
+
+The frontend uses **progressive enhancement** — all content loads on any device, layout adapts via CSS. No feature is removed on mobile; only presentation changes.
+
+## Scalability Roadmap
+
+### Current (MVP)
+- Single Node.js instance, PostgreSQL on same machine
+- In-memory rate limiting
+
+### Phase 2 (1K+ users)
+- Upstash Redis for distributed rate limiting
+- Connection pooling (PgBouncer)
+- CDN for frontend
+
+### Phase 3 (10K+ users)
+- Horizontal scaling with load balancer + multiple backend nodes
+- Read replicas for PostgreSQL
+- Message queue (BullMQ/Redis) for AI generation
+
+### Phase 4 (100K+ users)
+- Microservices architecture
+- Database sharding
+- Geographic CDN + edge caching

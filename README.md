@@ -1,250 +1,183 @@
-# 🎬 TubeAI - AI YouTube Idea & Script Generator
+# 🎬 TubeAI — AI YouTube Idea & Script Generator
 
-A SaaS platform where YouTube creators can generate video ideas, titles, and full scripts using AI (OpenAI).
+> A production-ready SaaS platform for YouTube creators to generate video ideas, titles, and full scripts using AI.
+
+[![MIT License](https://img.shields.io/badge/License-MIT-red.svg)](LICENSE)
+[![Node.js 20+](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-blue.svg)](https://www.postgresql.org)
 
 ## ✨ Features
 
-- **AI Video Ideas** — Get fresh, trending ideas for any niche
-- **Catchy Titles** — Click-optimized titles for maximum CTR
-- **Full Scripts** — Complete video scripts with hooks, body, and CTAs
-- **Generation History** — Save and search all your past generations
-- **Free + Pro Plans** — Stripe-powered subscription with usage limits
-- **Clean Dark UI** — Modern, responsive dashboard design
+| Feature | Description |
+|---------|-------------|
+| 💡 **AI Video Ideas** | Get fresh, trending ideas for any niche |
+| ✍️ **Catchy Titles** | Click-optimized titles for maximum CTR |
+| 📝 **Full Scripts** | Complete scripts with hooks, body, and CTAs |
+| 📋 **Generation History** | Save, search, and manage all past generations |
+| 💳 **Stripe Payments** | Secure subscriptions with webhooks |
+| 📱 **Mobile-First UI** | Works on phones, tablets, and desktops |
+| 🔒 **JWT Authentication** | Stateless, secure, and horizontally scalable |
+| ⚡ **Rate Limiting** | Anti-abuse on auth and AI generation endpoints |
 
 ## 🛠 Tech Stack
 
 | Layer | Technology | Why |
 |-------|-----------|-----|
-| **Backend** | Node.js + Express | Mature ecosystem, fast development |
-| **Frontend** | Next.js 15 + TailwindCSS | SSR, modern DX, zero-config styling |
+| **Backend** | Node.js + Express | Mature, fast, huge ecosystem |
+| **Frontend** | Next.js 15 (App Ready) + TailwindCSS | SSR, zero-config styling, mobile-first |
 | **Database** | PostgreSQL | ACID-compliant, ideal for billing data |
-| **ORM** | Prisma | Type-safe, clean migrations |
-| **Auth** | JWT (custom) | Stateless, horizontally scalable |
-| **Payments** | Stripe | Global, subscriptions + webhooks |
-| **AI** | OpenAI API (GPT-4o / 4o-mini) | Best cost-to-quality ratio |
+| **ORM** | Prisma | Type-safe queries, clean migrations |
+| **Auth** | JWT (custom) | Stateless, scalable, no vendor lock-in |
+| **Payments** | Stripe | Global, PCI-compliant, webhook-driven |
+| **AI** | OpenAI (GPT-4o-mini / GPT-4o) | Best cost-to-quality ratio |
+| **Validation** | Zod | Runtime type checking at the edge |
+| **Testing** | Jest + Supertest | Unit + integration test framework |
 
 ## 📁 Folder Structure
 
-```
+\`\`\`
 TubeAI/
-├── README.md
-├── LICENSE
-├── .gitignore
-│
 ├── backend/
-│   ├── package.json
-│   ├── .env.example
+│   ├── package.json           # + Jest, ESLint, scripts
 │   ├── prisma/
-│   │   └── schema.prisma          # Database models
+│   │   ├── schema.prisma      # Database models
+│   │   └── seed.js            # Demo user seeder
 │   ├── src/
-│       │   ├── config/
-│       │   │   ├── openai.js       # OpenAI client & generation
-│       │   │   └── stripe.js       # Stripe integration
-│       │   ├── middleware/
-│       │   │   ├── auth.js         # JWT authentication
-│       │   │   ├── subscription.js # Usage limits by plan
-│       │   │   ├── rateLimiter.js  # Brute force prevention
-│       │   │   ├── errorHandler.js # Global error handling
-│       │   │   └── validate.js     # Zod request validation
-│       │   ├── models/             # (handled by Prisma)
-│       │   ├── services/
-│       │   │   ├── authService.js
-│       │   │   ├── generationService.js
-│       │   │   ├── historyService.js
-│       │   │   └── subscriptionService.js
-│       │   ├── routes/
-│       │   │   ├── authRoutes.js
-│       │   │   ├── generateRoutes.js
-│       │   │   ├── historyRoutes.js
-│       │   │   ├── subscriptionRoutes.js
-│       │   │   └── webhookRoutes.js
-│       │   ├── controllers/
-│       │   │   ├── authController.js
-│       │   │   ├── generateController.js
-│       │   │   ├── historyController.js
-│       │   │   ├── subscriptionController.js
-│       │   │   └── webhookController.js
-│       │   ├── utils/              # Helper functions
-│       │   └── server.js           # Express entry point
+│       │   ├── config/        # OpenAI client, Stripe integration
+│       │   ├── controllers/   # Request handlers (thin layer)
+│       │   ├── middleware/    # Auth, rate limiting, validation, error handler
+│       │   ├── routes/        # Route definitions with middleware chains
+│       │   ├── services/      # Business logic (JSDoc documented)
+│       │   ├── utils/         # Logger, helpers
+│       │   └── server.js      # Express entry point
+│   └── tests/                 # Jest test suites
+│       ├── auth.test.js
+│       ├── generation.test.js
+│       ├── middleware.test.js
+│       └── subscription.test.js
 │
 ├── frontend/
-│   ├── package.json
-│   ├── .env.example
-│   ├── next.config.js
-│   ├── tailwind.config.js
-│   ├── postcss.config.js
+│   ├── package.json           # + Next.js Bundle Analyzer
+│   ├── next.config.js         # Performance + security headers
+│   ├── tailwind.config.js     # Mobile-first breakpoints, custom theme
 │   ├── src/
-│   │   ├── pages/
-│   │   │   ├── index.js            # Landing page
-│   │   │   ├── pricing.js          # Plans page
-│   │   │   ├── auth/
-│   │   │   │   ├── login.js
-│   │   │   │   └── register.js
-│   │   │   └── dashboard/
-│   │   │       ├── index.js        # Main dashboard / generator
-│   │   │       └── history/
-│   │   │           ├── index.js    # History list
-│   │   │           └── detail/[id].js  # Individual generation
-│   │   ├── components/
-│   │   │   ├── Layout.js           # Public layout with navbar
-│   │   │   └── DashboardLayout.js  # Authenticated sidebar layout
-│   │   ├── services/
-│   │   │   └── api.js              # API client for backend
-│   │   ├── hooks/
-│   │   │   ├── useAuth.js          # Auth state management
-│   │   │   └── useGenerations.js   # Generation state + history
-│   │   ├── styles/
-│   │   │   └── globals.css         # Global styles + Tailwind
-│   │   └── utils/                  # Helper utilities
+│   │   ├── pages/             # Next.js pages (routing by file)
+│   │   │   ├── index.js       # Landing page (hero, features, pricing)
+│   │   │   ├── pricing.js     # Plans page
+│   │   │   ├── auth/          # Login + Registration
+│   │   │   └── dashboard/     # Generator, History, Detail views
+│   │   ├── components/        # Layout, DashboardLayout
+│   │   ├── services/api.js    # Typed API client
+│   │   ├── hooks/             # useAuth, useGenerations
+│   │   ├── styles/globals.css # Tailwind + responsive components
+│   │   └── utils/             # Format helpers
 │   └── public/
 │
-└── docs/
-    └── ARCHITECTURE.md             # System architecture details
-```
+├── docs/
+│   ├── ARCHITECTURE.md        # System design, data flow, scaling roadmap
+│   ├── API.md                 # All endpoints documented (+ request/response)
+│   ├── ENV.md                 # Environment variables reference
+│   └── SETUP.md               # Step-by-step local setup guide
+│
+├── README.md
+├── LICENSE                    # MIT
+└── .gitignore
+\`\`\`
 
-## 🚀 Setup Guide
+## 🚀 Quick Setup
 
-### Prerequisites
+### 1. Prerequisites
 
-- Node.js 20+
-- PostgreSQL database
-- OpenAI API key
-- Stripe account (for payments)
+| Software | Version |
+|----------|---------|
+| Node.js | 20+ |
+| npm | 10+ |
+| PostgreSQL | 14+ |
 
-### 1. Clone repository
+### 2. Backend
 
-```bash
-git clone https://github.com/yourusername/tubeai.git
-cd tubeai
-```
-
-### 2. Backend Setup
-
-```bash
+\`\`\`bash
 cd backend
-
-# Install dependencies
 npm install
-
-# Copy environment file and fill values
-cp .env.example .env
-
-# Set up database
+cp .env.example .env    # Fill in your keys
 npx prisma generate
-npx prisma migrate dev --name init
+npx prisma db push
+npm run dev             # → http://localhost:5000
+\`\`\`
 
-# (Optional) Seed demo user
-npx prisma db seed
+### 3. Frontend
 
-# Start development server
-npm run dev  # Runs on port 5000
-```
-
-### 3. Frontend Setup
-
-```bash
+\`\`\`bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Copy environment file
 cp .env.example .env
+npm run dev             # → http://localhost:3000
+\`\`\`
 
-# Start development server
-npm run dev  # Runs on port 3000
-```
+### 4. Run Tests
 
-### 4. Environment Variables
+\`\`\`bash
+cd backend
+npm test                # Jest + coverage
+npm test -- --watch     # Watch mode
+\`\`\`
 
-```bash
-# Backend .env
-PORT=5000
-DATABASE_URL="postgresql://user:password@localhost:5432/tubeai"
-JWT_SECRET=your-secret-key
-OPENAI_API_KEY=sk-your-key
-STRIPE_SECRET_KEY=sk_test_your-key
-STRIPE_WEBHOOK_SECRET=whsec_your-secret
-FRONTEND_URL=http://localhost:3000
+📖 **Detailed setup guide:** [docs/SETUP.md](docs/SETUP.md)
+📖 **Environment variables:** [docs/ENV.md](docs/ENV.md)
 
-# Frontend .env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-```
-
-## 🌐 API Endpoints
+## 🔌 API Endpoints
 
 | Method | Endpoint | Auth | Description |
 |--------|---------|------|-------------|
-| POST | /api/auth/register | ❌ | Register new user |
-| POST | /api/auth/login | ❌ | Login & get token |
-| GET | /api/auth/me | ✅ | Get current user profile |
-| POST | /api/generate | ✅ | Generate content |
-| GET | /api/generate/:id | ✅ | Get generation detail |
-| DELETE | /api/generate/:id | ✅ | Delete generation |
-| GET | /api/history | ✅ | List history (paginated) |
-| GET | /api/history/search | ✅ | Search by topic |
-| POST | /api/subscription/checkout | ✅ | Create Stripe checkout |
-| GET | /api/subscription/portal | ✅ | Manage subscription |
+| POST | \`/api/auth/register\` | ❌ | Register new user |
+| POST | \`/api/auth/login\` | ❌ | Login and get JWT token |
+| GET | \`/api/auth/me\` | ✅ | Get current user profile |
+| POST | \`/api/generate\` | ✅ | Generate AI content |
+| GET | \`/api/generate/:id\` | ✅ | Get generation detail |
+| DELETE | \`/api/generate/:id\` | ✅ | Delete generation |
+| GET | \`/api/history\` | ✅ | Paginated history |
+| GET | \`/api/history/search\` | ✅ | Search by topic |
+| POST | \`/api/subscription/checkout\` | ✅ | Stripe checkout |
+| GET | \`/api/subscription/portal\` | ✅ | Manage subscription |
+| POST | \`/api/webhook/stripe\` | 🔐 Webhook | Payment events |
 
-## 🚢 Deployment Guide
+📖 **Full API docs:** [docs/API.md](docs/API.md)
 
-### Backend (VPS / Render / Railway)
+## 🌐 Deployment
 
-```bash
-# Install dependencies, generate Prisma client
-npm ci
+### Backend (VPS / Railway / Render)
+
+\`\`\`bash
+npm ci --production
 npx prisma generate
 npx prisma migrate deploy
-
-# Set environment variables in hosting platform
-# Then start
 npm start
-```
+\`\`\`
 
 ### Frontend (Vercel recommended)
 
-```bash
-# Build
+\`\`\`bash
 npm run build
-
-# Start production server
 npm start
-```
+\`\`\`
 
-Or deploy on Vercel:
-```bash
-vercel --prod
-```
+Or deploy: \`vercel --prod\`
 
-### VPS Setup (Ubuntu)
-
-```bash
-# Install Node.js
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs postgresql nginx
-
-# Create PostgreSQL database
-sudo -u postgres psql
-CREATE DATABASE tubeai;
-CREATE USER tubeuser WITH PASSWORD 'securepassword';
-GRANT ALL PRIVILEGES ON DATABASE tubeai TO tubeuser;
-\q
-
-# Install PM2
-npm install -g pm2
-
-# Start backend with PM2
-cd /opt/tubeai/backend
-pm2 start src/server.js --name tubeai-api
-
-# Start frontend
-cd /opt/tubeai/frontend
-pm2 start "npm start" --name tubeai-web
-
-# Nginx reverse proxy
-# Configure in /etc/nginx/sites-available/tubeai
-```
+📖 **Full deployment guide:** [docs/SETUP.md](docs/SETUP.md)
 
 ## 📋 License
 
 MIT License — see [LICENSE](LICENSE) file.
+
+## 🗺️ Roadmap
+
+- [ ] YouTube thumbnail generation (DALL-E)
+- [ ] SEO tags + description generator
+- [ ] Bulk generation (10 videos at once)
+- [ ] Team workspaces & collaboration
+- [ ] API access for developers
+- [ ] Multi-language support (Hindi, Spanish, etc.)
+
+---
+
+Built with ❤️ for YouTube creators everywhere.

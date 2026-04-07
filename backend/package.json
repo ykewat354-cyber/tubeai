@@ -9,7 +9,40 @@
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev",
     "db:push": "npx prisma db push",
-    "db:studio": "npx prisma studio"
+    "db:reset": "npx prisma migrate reset",
+    "db:studio": "npx prisma studio",
+    "db:seed": "node prisma/seed.js",
+    "lint": "eslint src/ --ext .js",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
+    "build": "echo \"No build step required for Node.js\""
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov"],
+    "collectCoverageFrom": [
+      "src/services/**/*.js",
+      "src/middleware/**/*.js",
+      "src/utils/**/*.js",
+      "!src/utils/logger.js"
+    ],
+    "testPathIgnorePatterns": ["/node_modules/"]
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true,
+      "es2024": true,
+      "jest": true
+    },
+    "parserOptions": {
+      "ecmaVersion": 2024
+    },
+    "rules": {
+      "no-unused-vars": "error",
+      "semi": ["error", "always"],
+      "quotes": ["error", "double"]
+    }
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
@@ -26,6 +59,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0",
     "nodemon": "^3.1.4",
     "prisma": "^5.20.0"
   }

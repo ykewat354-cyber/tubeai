@@ -1,11 +1,30 @@
+/**
+ * Subscription service
+ * Manages Stripe checkout, billing portal, and subscription lifecycle.
+ *
+ * Flow:
+ * 1. User selects plan → createCheckout() → redirects to Stripe
+ * 2. Stripe processes payment → webhook activates subscription
+ * 3. User manages subscription → Stripe billing portal
+ * 4. Cancellation → webhook downgrades to free plan
+ *
+ * @module subscriptionService
+ */
+
 const { prisma } = require("../server");
 const { createCheckoutSession, createBillingPortalSession, stripe } = require("../config/stripe");
 
 /**
- * Create a checkout session for subscription
+ * Create a Stripe checkout session for subscription upgrade
+ *
+ * @param {string} userId - User UUID (stored in metadata for webhook)
+ * @param {string} email - User email (pre-fills Stripe form)
+ * @param {string} plan - Plan key: "pro" or "pro-yearly"
+ * @returns {Promise<{url: string, sessionId: string}>} Checkout URL and session ID
+ * @throws {Error} If plan is invalid or price ID missing
  */
 async function createCheckout(userId, email, plan) {
-  // Determine price ID
+  // Map plan key to Stripe Price ID
   const priceMap = {
     pro: process.env.STRIPE_PRICE_ID_PRO,
     "pro-yearly": process.env.STRIPE_PRICE_ID_PRO_YEARLY,
@@ -27,7 +46,12 @@ async function createCheckout(userId, email, plan) {
 }
 
 /**
- * Create billing portal session for managing subscription
+ * Create a Stripe billing portal session for managing subscription
+ * (cancel, update payment method, view invoices)
+ *
+ * @param {string} userId - User UUID
+ * @returns {Promise<{url: string}>} Billing portal URL
+ * @throws {Error} If user has no active Stripe customer ID
  */
 async function createManagePortal(userId) {
   const user = await prisma.user.findUnique({
@@ -45,7 +69,12 @@ async function createManagePortal(userId) {
 }
 
 /**
- * Handle successful subscription payment
+ * Activate user's subscription after successful Stripe payment
+ * Called from both webhook and session check endpoint
+ *
+ * @param {string} sessionId - Stripe checkout session ID
+ * @returns {Promise<void>}
+ * @throws {Error} If payment not completed
  */
 async function activateSubscription(sessionId) {
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -66,13 +95,19 @@ async function activateSubscription(sessionId) {
       plan,
       stripeCustomerId: customerId,
       stripeSubId: session.subscription,
-      subscriptionEnd: new Date(session.current_period_end * 1000),
+      subscriptionEnd: session.current_period_end
+        ? new Date(session.current_period_end * 1000)
+        : null,
     },
   });
 }
 
 /**
- * Handle subscription cancellation via webhook
+ * Cancel subscription — downgrade user to free plan
+ * Called by webhook on customer.subscription.deleted event
+ *
+ * @param {string} customerId - Stripe customer ID
+ * @returns {Promise<void>}
  */
 async function cancelSubscription(customerId) {
   await prisma.user.updateMany({
