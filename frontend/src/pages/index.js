@@ -12,6 +12,38 @@
  */
 export default function HomePage() {
   const children = `
+
+    <script>
+      // SEO Meta Tags
+      (function() {
+        document.title = 'TubeAI — AI YouTube Video Idea & Script Generator';
+        function addMeta(name, content) {
+          var m = document.querySelector('meta[name="' + name + '"]');
+          if (!m) { m = document.createElement('meta'); m.setAttribute('name', name); document.head.appendChild(m); }
+          m.setAttribute('content', content);
+        }
+        function addProperty(prop, content) {
+          var m = document.querySelector('meta[property="' + prop + '"]');
+          if (!m) { m = document.createElement('meta'); m.setAttribute('property', prop); document.head.appendChild(m); }
+          m.setAttribute('content', content);
+        }
+        addMeta('description', 'Generate viral YouTube video ideas, click-worthy titles, and full scripts in seconds with AI. Start free with 3 generations/day.');
+        addMeta('keywords', 'youtube, ai, script generator, video ideas, content creator, youtube tools');
+        addMeta('robots', 'index, follow');
+        addMeta('viewport', 'width=device-width, initial-scale=1');
+        addProperty('og:title', 'TubeAI — AI YouTube Video Idea & Script Generator');
+        addProperty('og:description', 'Generate viral YouTube video ideas, click-worthy titles, and full scripts in seconds with AI.');
+        addProperty('og:type', 'website');
+        addProperty('og:site_name', 'TubeAI');
+        addProperty('twitter:card', 'summary_large_image');
+        addProperty('twitter:title', 'TubeAI — AI YouTube Video Idea & Script Generator');
+        addProperty('twitter:description', 'Generate viral YouTube video ideas, click-worthy titles, and full scripts in seconds.');
+        // Canonical URL
+        var canonical = document.querySelector('link[rel="canonical"]');
+        if (!canonical) { canonical = document.createElement('link'); canonical.setAttribute('rel', 'canonical'); document.head.appendChild(canonical); }
+        canonical.setAttribute('href', window.location.origin);
+      })();
+    <\/script>
     <!-- Hero Section -->
     <section class="relative overflow-hidden px-4 sm:px-6 lg:px-8 py-16 sm:py-24 lg:py-32">
       <div class="max-w-7xl mx-auto text-center">

@@ -102,6 +102,7 @@ app.use(requestLogger);
 // ===================== Routes =====================
 
 // Health checks (with detailed monitoring)
+// Health checks
 app.use('/api/health', require('./routes/healthRoutes'));
 
 // API routes
@@ -112,6 +113,9 @@ app.use('/api/subscription', require('./routes/subscriptionRoutes'));
 app.use('/api/webhook', require('./routes/webhookRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/jobs', require('./routes/jobRoutes'));
+
+// Admin routes (protected by admin API key)
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 // 404 — not found
 app.use((req, res) => {
