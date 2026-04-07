@@ -19,6 +19,8 @@ model User {
   verificationToken String?         @unique
   passwordResetCode String?
   passwordResetExp DateTime?
+  passwordResetToken String?        @unique
+  passwordResetExpires DateTime?
   plan             String           @default("free")
   stripeCustomerId String?          @unique
   stripeSubId      String?          @unique

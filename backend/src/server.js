@@ -117,6 +117,9 @@ app.use('/api/jobs', require('./routes/jobRoutes'));
 // Admin routes (protected by admin API key)
 app.use('/api/admin', require('./routes/adminRoutes'));
 
+// Email verification & password reset
+app.use('/api/auth/email', require('./routes/emailRoutes'));
+
 // 404 — not found
 app.use((req, res) => {
   res.status(404).json({

@@ -1,14 +1,12 @@
 {
   "name": "tubeai-frontend",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "lint": "next lint",
-    "analyze": "ANALYZE=true next build",
-    "test": "echo \"Use Cypress or Playwright for E2E tests\""
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "^15.0.0",
@@ -26,11 +24,5 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "browserslist": [
-    "last 2 versions",
-    "not dead",
-    "iOS >= 12",
-    "Android >= 8"
-  ]
+  }
 }

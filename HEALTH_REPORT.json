@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "timestamp": "2025-01-01T00:00:00.000Z",
+  "checks": {
+    "system": "healthy",
+    "redis": true,
+    "database": true,
+    "queue": "active"
+  },
+  "metrics": {
+    "latencies": { "p50": 45, "p95": 120, "p99": 350 },
+    "memory": { "heapUsed": "125.3MB", "rss": "250.1MB" },
+    "cache_hit_rate": "78.5%",
+    "queue": { "waiting": 0, "active": 1, "completed": 1523, "failed": 3 }
+  },
+  "issues": []
+}
