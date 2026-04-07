@@ -1,0 +1,41 @@
+// TubeAI Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String        @id @default(uuid())
+  name             String
+  email            String        @unique
+  password         String
+  plan             String        @default("free")
+  stripeCustomerId String?       @unique
+  stripeSubId      String?       @unique
+  subscriptionEnd  DateTime?
+  generations      Generation[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([email])
+  @@index([stripeCustomerId])
+}
+
+model Generation {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic     String
+  format    String   // "ideas", "titles", "script", "all"
+  result    Json     // Actual AI-generated content
+  model     String   @default("gpt-4o-mini")
+  tokens    Int?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
